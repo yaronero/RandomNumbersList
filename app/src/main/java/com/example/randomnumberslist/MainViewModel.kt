@@ -6,9 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
 class MainViewModel : ViewModel() {
@@ -17,43 +19,51 @@ class MainViewModel : ViewModel() {
     val randomNumberList: LiveData<List<Int>>
         get() = _randomNumberList
 
+    private var disposes = CompositeDisposable()
+
+    private var thread: Thread? = null
+
     init {
         getNumbersWithThread()
 
 //        getNumbersWithCoroutine()
-//
-//        getNumbersWithRx()
+
+//        disposes.add(
+//            getNumbersWithRx()
 //            .subscribeOn(Schedulers.newThread())
 //            .observeOn(AndroidSchedulers.mainThread())
-//            .subscribe {
+//            .subscribe({
 //                val list = _randomNumberList.value?.toMutableList() ?: mutableListOf()
 //                list.add(it)
 //                _randomNumberList.value = list
-//            }
+//            }, {
+//
+//            })
+//        )
     }
 
     private fun getNumbersWithCoroutine() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO){
             while (true) {
                 delay(500)
                 val list = _randomNumberList.value?.toMutableList() ?: mutableListOf()
                 list.add(Random.nextInt(100))
-                _randomNumberList.value = list
+                withContext(Dispatchers.Main) {
+                    _randomNumberList.value = list
+                }
             }
         }
     }
 
     private fun getNumbersWithRx(): Observable<Int> {
-        return Observable.create {
-            while (true) {
-                Thread.sleep(500)
-                it.onNext(Random.nextInt(100))
+       return Observable.interval(1, TimeUnit.SECONDS)
+            .map {
+                Random.nextInt(100)
             }
-        }
     }
 
     private fun getNumbersWithThread() {
-        val thread = Thread {
+        thread = Thread {
             while (true) {
                 Thread.sleep(500)
                 val list = _randomNumberList.value?.toMutableList() ?: mutableListOf()
@@ -61,6 +71,12 @@ class MainViewModel : ViewModel() {
                 _randomNumberList.postValue(list)
             }
         }
-        thread.start()
+        thread?.start()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        disposes.clear()
+        thread?.interrupt()
     }
 }
