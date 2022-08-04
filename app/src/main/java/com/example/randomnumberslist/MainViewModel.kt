@@ -33,9 +33,8 @@ class MainViewModel : ViewModel() {
 //            .subscribeOn(Schedulers.newThread())
 //            .observeOn(AndroidSchedulers.mainThread())
 //            .subscribe({
-//                val list = _randomNumberList.value?.toMutableList() ?: mutableListOf()
-//                list.add(it)
-//                _randomNumberList.value = list
+//                val list = _randomNumberList.value ?: emptyList()
+//                _randomNumberList.value = list + it
 //            }, {
 //
 //            })
@@ -46,10 +45,9 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO){
             while (true) {
                 delay(500)
-                val list = _randomNumberList.value?.toMutableList() ?: mutableListOf()
-                list.add(Random.nextInt(100))
+                val list = _randomNumberList.value ?: emptyList()
                 withContext(Dispatchers.Main) {
-                    _randomNumberList.value = list
+                    _randomNumberList.value = list + Random.nextInt(100)
                 }
             }
         }
@@ -66,9 +64,8 @@ class MainViewModel : ViewModel() {
         thread = Thread {
             while (true) {
                 Thread.sleep(500)
-                val list = _randomNumberList.value?.toMutableList() ?: mutableListOf()
-                list.add(Random.nextInt(100))
-                _randomNumberList.postValue(list)
+                val list = _randomNumberList.value ?: emptyList()
+                _randomNumberList.postValue(list + Random.nextInt(100))
             }
         }
         thread?.start()
